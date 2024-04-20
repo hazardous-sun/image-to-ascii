@@ -3,7 +3,7 @@ use image;
 #[derive(Debug)]
 pub struct Config {
     image_path: String,
-    reduction_factor: f32
+    reduction_factor: f32,
 }
 
 impl Config {
@@ -25,7 +25,9 @@ impl Config {
             }
         }
 
-        if reduction_factor > 1.0 {}
+        if reduction_factor > 1.0 {
+            return Err("ERROR: Reduction factor must be equal to or smaller than 1");
+        }
 
         Ok(Config {
             image_path,
@@ -34,11 +36,33 @@ impl Config {
     }
 }
 
+struct AsciiSymbols {
+    characters: Vec<&'static str>,
+}
+
+impl AsciiSymbols {
+    fn new() -> AsciiSymbols {
+        let characters: Vec<&'static str> = vec![
+            "□",
+            "▥",
+            "▧",
+            "▩",
+            "▦",
+            "▣",
+            "■",
+        ];
+
+        AsciiSymbols {
+            characters
+        }
+    }
+}
+
 pub fn run(image_path: &str) -> String {
     let image = load_image(image_path)?;
     match image {
         Ok(image) => {
-            image_to_ascii(image)
+            String::from("this should return the image as a string")
         }
     }
 }
@@ -48,10 +72,11 @@ fn load_image(image_path: &str) -> Result<image::DynamicImage, image::ImageError
     Ok(image)
 }
 
-fn image_to_ascii(image: image::DynamicImage) -> String {
-    let bw_image = make_image_bw(image);
-}
+mod tests {
+    use super::*;
 
-fn make_image_bw(image: image::DynamicImage) -> image::Image {
-    image::
+    #[test]
+    fn load_image() {
+        let image = load_image("");
+    }
 }
