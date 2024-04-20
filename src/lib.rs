@@ -1,3 +1,4 @@
+use std::error::Error;
 use image;
 
 #[derive(Debug)]
@@ -44,8 +45,8 @@ impl AsciiSymbols {
     fn new() -> AsciiSymbols {
         let characters: Vec<&'static str> = vec![
             "□",
-            "▥",
             "▧",
+            "▥",
             "▩",
             "▦",
             "▣",
@@ -58,25 +59,38 @@ impl AsciiSymbols {
     }
 }
 
-pub fn run(image_path: &str) -> String {
-    let image = load_image(image_path)?;
+pub fn run(image_path: &str) -> Result<(), &'static str> {
+    let image = load_image(image_path);
     match image {
         Ok(image) => {
-            String::from("this should return the image as a string")
-        }
+            Ok(())
+        },
+        Err(_) => {
+            Err("ERROR: Error in RUN method")
+        },
     }
 }
 
-fn load_image(image_path: &str) -> Result<image::DynamicImage, image::ImageError> {
-    let image = image::open(image_path)?;
-    Ok(image)
+fn load_image(image_path: &str) -> Result<image::DynamicImage, &'static str> {
+    let image = image::open(image_path);
+    match image {
+        Ok(image) => Ok(image),
+        Err(_) => Err("ERROR: Invalid image path.")
+    }
 }
 
 mod tests {
     use super::*;
 
     #[test]
-    fn load_image() {
-        let image = load_image("");
+    fn ok_load_image() {
+        let image = load_image("test_images/duck.png");
+        assert!(image.is_ok());
+    }
+
+    #[test]
+    fn err_load_image() {
+        let image = load_image("duckduckgo");
+        assert!(image.is_err());
     }
 }
