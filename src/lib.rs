@@ -1,25 +1,26 @@
 use std::error::Error;
 use image;
+use image::{DynamicImage, ImageBuffer, Pixel};
+use image::imageops::{FilterType, resize};
 
 pub fn run(args: &[String]) -> Result<(), &'static str> {
-
     let config: Config;
 
     match Config::build(args) {
-        Ok(result) => { config = result; },
-        Err(e) => { return Err(e); },
+        Ok(result) => { config = result; }
+        Err(e) => { return Err(e); }
     }
 
     let symbols: Symbols = Symbols::new();
 
-    let image = load_image(&config.image_path);
+    let mut image = load_image(&config.image_path);
     match image {
         Ok(image) => {
             Ok(())
-        },
+        }
         Err(e) => {
             Err(e)
-        },
+        }
     }
 }
 
@@ -42,7 +43,7 @@ impl Config {
         match args[2].parse() {
             Ok(number) => {
                 reduction_factor = number;
-            },
+            }
             Err(_) => {
                 return Err("ERROR: Invalid float number passed!\n");
             }
@@ -54,7 +55,7 @@ impl Config {
 
         Ok(Config {
             image_path,
-            reduction_factor
+            reduction_factor,
         })
     }
 }
@@ -87,6 +88,16 @@ fn load_image(image_path: &String) -> Result<image::DynamicImage, &'static str> 
         Ok(image) => Ok(image),
         Err(_) => Err("ERROR: Invalid image path.")
     }
+}
+
+fn resize_image(image: &mut DynamicImage, config: &Config) -> ImageBuffer<Pixel, _> {
+    let (new_width, new_height) = get_new_dimensions(&image, config);
+    return resize(&mut image, new_width, new_height, FilterType::Triangle);
+}
+
+fn get_new_dimensions(image: &DynamicImage, config: &Config) -> (u32, u32) {
+    ((image.width() as f32 * config.reduction_factor) as u32,
+     (image.width() as f32 * config.reduction_factor) as u32)
 }
 
 mod tests {
