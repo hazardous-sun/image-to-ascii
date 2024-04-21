@@ -1,6 +1,28 @@
 use std::error::Error;
 use image;
 
+pub fn run(args: &[String]) -> Result<(), &'static str> {
+
+    let config: Config;
+
+    match Config::build(args) {
+        Ok(result) => { config = result; },
+        Err(e) => { return Err(e); },
+    }
+
+    let symbols: Symbols = Symbols::new();
+
+    let image = load_image(&config.image_path);
+    match image {
+        Ok(image) => {
+            Ok(())
+        },
+        Err(e) => {
+            Err(e)
+        },
+    }
+}
+
 #[derive(Debug)]
 pub struct Config {
     image_path: String,
@@ -13,7 +35,7 @@ impl Config {
             return Err("ERROR: Not enough parameters passed!\nUsage: image-to-ascii [IMAGE_PATH] [REDUCTION_FACTOR]");
         }
 
-        let image_path = args[1].to_string();
+        let image_path = args[1].clone();
 
         let reduction_factor: f32;
 
@@ -37,12 +59,12 @@ impl Config {
     }
 }
 
-struct AsciiSymbols {
+struct Symbols {
     characters: Vec<&'static str>,
 }
 
-impl AsciiSymbols {
-    fn new() -> AsciiSymbols {
+impl Symbols {
+    fn new() -> Symbols {
         let characters: Vec<&'static str> = vec![
             "□",
             "▧",
@@ -53,25 +75,13 @@ impl AsciiSymbols {
             "■",
         ];
 
-        AsciiSymbols {
+        Symbols {
             characters
         }
     }
 }
 
-pub fn run(image_path: &str) -> Result<(), &'static str> {
-    let image = load_image(image_path);
-    match image {
-        Ok(image) => {
-            Ok(())
-        },
-        Err(_) => {
-            Err("ERROR: Error in RUN method")
-        },
-    }
-}
-
-fn load_image(image_path: &str) -> Result<image::DynamicImage, &'static str> {
+fn load_image(image_path: &String) -> Result<image::DynamicImage, &'static str> {
     let image = image::open(image_path);
     match image {
         Ok(image) => Ok(image),
@@ -84,13 +94,31 @@ mod tests {
 
     #[test]
     fn ok_load_image() {
-        let image = load_image("test_images/duck.png");
+        let image = load_image(&"test_images/duck.png".to_string());
         assert!(image.is_ok());
     }
 
     #[test]
     fn err_load_image() {
-        let image = load_image("duckduckgo");
+        let image = load_image(&"duckduckgo".to_string());
         assert!(image.is_err());
+    }
+
+    #[test]
+    fn ok_config_build() {
+        let values = vec![".".to_string(), "path/to/image".to_string(), "0.5".to_string()];
+        let config = Config::build(&values[..]);
+        assert!(config.is_ok())
+    }
+
+    #[test]
+    fn err_config_build() {
+        let values = vec![".".to_string(), "path/to/image".to_string(), "1.5".to_string()];
+        let config = Config::build(&values[..]);
+        assert!(config.is_err());
+
+        let values = vec![".".to_string(), "path/to/image".to_string()];
+        let config = Config::build(&values[..]);
+        assert!(config.is_err())
     }
 }
