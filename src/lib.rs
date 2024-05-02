@@ -48,9 +48,11 @@ impl Config {
 
         if args.len() < 3 {
             return Err("ERROR: Not enough parameters passed!\nUsage: image-to-ascii [IMAGE_PATH] [REDUCTION_FACTOR]");
-        } else {
+        } else if args.len() < 4 {
             image_path = args[1].clone();
             reversed = true;
+        } else {
+            image_path = args[1].clone();
         }
 
         match args[2].parse() {
