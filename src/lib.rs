@@ -1,7 +1,7 @@
 use std::error::Error;
 use image;
-use image::{DynamicImage, ImageBuffer, Pixel};
-use image::imageops::{FilterType, resize};
+use image::{DynamicImage, Pixel};
+use image::imageops::{FilterType};
 
 pub fn run(args: &[String]) -> Result<(), &'static str> {
     let config: Config;
@@ -82,7 +82,7 @@ impl Symbols {
     }
 }
 
-fn load_image(image_path: &String) -> Result<image::DynamicImage, &'static str> {
+fn load_image(image_path: &String) -> Result<DynamicImage, &'static str> {
     let image = image::open(image_path);
     match image {
         Ok(image) => Ok(image),
@@ -90,9 +90,9 @@ fn load_image(image_path: &String) -> Result<image::DynamicImage, &'static str> 
     }
 }
 
-fn resize_image(image: &mut DynamicImage, config: &Config) -> ImageBuffer<Pixel, _> {
+fn resize_image(image: &mut DynamicImage, config: &Config) -> DynamicImage {
     let (new_width, new_height) = get_new_dimensions(&image, config);
-    return resize(&mut image, new_width, new_height, FilterType::Triangle);
+    return image.resize(new_width, new_height, FilterType::Lanczos3);
 }
 
 fn get_new_dimensions(image: &DynamicImage, config: &Config) -> (u32, u32) {
@@ -131,5 +131,25 @@ mod tests {
         let values = vec![".".to_string(), "path/to/image".to_string()];
         let config = Config::build(&values[..]);
         assert!(config.is_err())
+    }
+
+    #[test]
+    fn ok_resizing_image() {
+        let values = vec![".".to_string(), "path/to/image".to_string(), "0.5".to_string()];
+        let config = Config::build(&values[..]);
+        let image = load_image(&"test_images/duck.png".to_string());
+        let resized_image = resize_image(&mut image.unwrap(), &config.unwrap());
+        assert_eq!(resized_image.width(), 200);
+        assert_eq!(resized_image.height(), 200);
+    }
+
+    #[test]
+    fn err_resizing_image() {
+        let values = vec![".".to_string(), "path/to/image".to_string(), "0.5".to_string()];
+        let config = Config::build(&values[..]);
+        let image = load_image(&"test_images/duck.png".to_string());
+        let resized_image = resize_image(&mut image.unwrap(), &config.unwrap());
+        assert_ne!(resized_image.width(), 400);
+        assert_ne!(resized_image.height(), 400);
     }
 }
