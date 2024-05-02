@@ -1,4 +1,4 @@
-use image::{DynamicImage, Pixel};
+use image::{DynamicImage, GrayImage, Pixel};
 use image::imageops::{FilterType};
 
 pub fn run(args: &[String]) -> Result<(), &'static str> {
@@ -12,15 +12,29 @@ pub fn run(args: &[String]) -> Result<(), &'static str> {
     }
 
     match load_image(&config.image_path) {
-        Ok(mut image) => { image = resize_image(&mut image, &config); }
+        Ok(returned_image) => { image = resize_image(returned_image, &config); }
         Err(e) => { return Err(e) }
     }
+
+    let grayscale_image = remove_colors(&image);
+    let mut current_y = 0;
+
+    for (_, y, pixel) in grayscale_image.enumerate_pixels() {
+        let brightness = symbols.get_ascii_value(pixel);
+        if y > current_y {
+            println!();
+            current_y = y;
+        }
+        print!("{brightness}");
+    }
+
+    println!();
 
     return Ok(())
 }
 
 #[derive(Debug)]
-pub struct Config {
+struct Config {
     image_path: String,
     reduction_factor: f32,
 }
@@ -75,6 +89,29 @@ impl Symbols {
             characters
         }
     }
+
+    fn get_ascii_value(&self, pixel: &image::Luma<u8>) -> &str {
+        return self.characters[self.get_intensity(pixel) as usize]
+    }
+
+    fn get_intensity(&self, pixel: &image::Luma<u8>) -> i32 {
+        let value = pixel[0] as u32;
+        return if value < 36 {
+            0
+        } else if value < 72 {
+            1
+        } else if value < 108 {
+            2
+        } else if value < 144 {
+            3
+        } else if value < 180 {
+            4
+        } else if value < 216 {
+            5
+        } else {
+            6
+        }
+    }
 }
 
 fn load_image(image_path: &String) -> Result<DynamicImage, &'static str> {
@@ -85,14 +122,18 @@ fn load_image(image_path: &String) -> Result<DynamicImage, &'static str> {
     }
 }
 
-fn resize_image(image: &mut DynamicImage, config: &Config) -> DynamicImage {
+fn resize_image(image: DynamicImage, config: &Config) -> DynamicImage {
     let (new_width, new_height) = get_new_dimensions(&image, config);
-    return image.resize(new_width, new_height, FilterType::Lanczos3);
+    return image.resize(new_width * 20, new_height, FilterType::Lanczos3);
 }
 
 fn get_new_dimensions(image: &DynamicImage, config: &Config) -> (u32, u32) {
     ((image.width() as f32 * config.reduction_factor) as u32,
-     (image.width() as f32 * config.reduction_factor) as u32)
+     (image.height() as f32 * config.reduction_factor) as u32)
+}
+
+fn remove_colors(image: &DynamicImage) -> GrayImage {
+    image.to_luma8()
 }
 
 mod tests {
@@ -133,7 +174,8 @@ mod tests {
         let values = vec![".".to_string(), "path/to/image".to_string(), "0.5".to_string()];
         let config = Config::build(&values[..]);
         let image = load_image(&"test_images/duck.png".to_string());
-        let resized_image = resize_image(&mut image.unwrap(), &config.unwrap());
+        let resized_image = resize_image(image.unwrap(), &config.unwrap());
+
         assert_eq!(resized_image.width(), 200);
         assert_eq!(resized_image.height(), 200);
     }
@@ -143,7 +185,8 @@ mod tests {
         let values = vec![".".to_string(), "path/to/image".to_string(), "0.5".to_string()];
         let config = Config::build(&values[..]);
         let image = load_image(&"test_images/duck.png".to_string());
-        let resized_image = resize_image(&mut image.unwrap(), &config.unwrap());
+        let resized_image = resize_image(image.unwrap(), &config.unwrap());
+
         assert_ne!(resized_image.width(), 400);
         assert_ne!(resized_image.height(), 400);
     }
