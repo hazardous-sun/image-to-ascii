@@ -1,4 +1,4 @@
-use image::{DynamicImage, GrayImage, Pixel};
+use image::{DynamicImage, GrayImage};
 use image::imageops::{FilterType};
 
 pub fn run(args: &[String]) -> Result<(), &'static str> {
@@ -13,14 +13,14 @@ pub fn run(args: &[String]) -> Result<(), &'static str> {
 
     match load_image(&config.image_path) {
         Ok(returned_image) => { image = resize_image(returned_image, &config); }
-        Err(e) => { return Err(e) }
+        Err(e) => { return Err(e); }
     }
 
     let grayscale_image = remove_colors(&image);
     let mut current_y = 0;
 
     for (_, y, pixel) in grayscale_image.enumerate_pixels() {
-        let brightness = symbols.get_ascii_value(pixel);
+        let brightness = symbols.get_ascii_value(pixel, &config);
         if y > current_y {
             println!();
             current_y = y;
@@ -30,24 +30,28 @@ pub fn run(args: &[String]) -> Result<(), &'static str> {
 
     println!();
 
-    return Ok(())
+    return Ok(());
 }
 
 #[derive(Debug)]
 struct Config {
     image_path: String,
     reduction_factor: f32,
+    reversed: bool,
 }
 
 impl Config {
     pub fn build(args: &[String]) -> Result<Config, &'static str> {
+        let mut image_path: String;
+        let mut reduction_factor: f32;
+        let mut reversed= false;
+
         if args.len() < 3 {
             return Err("ERROR: Not enough parameters passed!\nUsage: image-to-ascii [IMAGE_PATH] [REDUCTION_FACTOR]");
+        } else {
+            image_path = args[1].clone();
+            reversed = true;
         }
-
-        let image_path = args[1].clone();
-
-        let reduction_factor: f32;
 
         match args[2].parse() {
             Ok(number) => {
@@ -65,6 +69,7 @@ impl Config {
         Ok(Config {
             image_path,
             reduction_factor,
+            reversed,
         })
     }
 }
@@ -76,6 +81,7 @@ struct Symbols {
 impl Symbols {
     fn new() -> Symbols {
         let characters: Vec<&'static str> = vec![
+            " ",
             "□",
             "▧",
             "▥",
@@ -90,26 +96,35 @@ impl Symbols {
         }
     }
 
-    fn get_ascii_value(&self, pixel: &image::Luma<u8>) -> &str {
-        return self.characters[self.get_intensity(pixel) as usize]
+    fn get_ascii_value(&self, pixel: &image::Luma<u8>, config: &Config) -> &str {
+        return self.characters[self.get_intensity(pixel, config.reversed) as usize];
     }
 
-    fn get_intensity(&self, pixel: &image::Luma<u8>) -> i32 {
+    fn get_intensity(&self, pixel: &image::Luma<u8>, reversed: bool) -> i32 {
         let value = pixel[0] as u32;
-        return if value < 36 {
-            0
-        } else if value < 72 {
-            1
-        } else if value < 108 {
-            2
-        } else if value < 144 {
-            3
-        } else if value < 180 {
-            4
-        } else if value < 216 {
-            5
+
+        return if reversed {
+            match value {
+                0..=32 => 0,
+                33..=64 => 1,
+                65..=96 => 2,
+                97..=128 => 3,
+                129..=160 => 4,
+                161..=192 => 5,
+                193..=224 => 6,
+                _ => 7,
+            }
         } else {
-            6
+            match value {
+                225..=256 => 0,
+                193..=224 => 1,
+                161..=192 => 2,
+                129..=160 => 3,
+                97..=128 => 4,
+                65..=96 => 5,
+                33..=64 => 6,
+                _ => 7
+            }
         }
     }
 }
@@ -123,13 +138,16 @@ fn load_image(image_path: &String) -> Result<DynamicImage, &'static str> {
 }
 
 fn resize_image(image: DynamicImage, config: &Config) -> DynamicImage {
-    let (new_width, new_height) = get_new_dimensions(&image, config);
-    return image.resize(new_width * 20, new_height, FilterType::Lanczos3);
+    let (nwidth, nheight) = get_new_dimensions(&image, config);
+    // return image.resize(nwidth, nheight, FilterType::Lanczos3);
+    return image.resize_exact(nwidth * 2, nheight, FilterType::Lanczos3);
 }
 
 fn get_new_dimensions(image: &DynamicImage, config: &Config) -> (u32, u32) {
-    ((image.width() as f32 * config.reduction_factor) as u32,
-     (image.height() as f32 * config.reduction_factor) as u32)
+    (
+        (image.width() as f32 * config.reduction_factor) as u32,
+        (image.height() as f32 * config.reduction_factor) as u32
+    )
 }
 
 fn remove_colors(image: &DynamicImage) -> GrayImage {
