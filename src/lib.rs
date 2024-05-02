@@ -1,27 +1,22 @@
-use std::error::Error;
-use image;
 use image::{DynamicImage, Pixel};
 use image::imageops::{FilterType};
 
 pub fn run(args: &[String]) -> Result<(), &'static str> {
+    let symbols: Symbols = Symbols::new();
     let config: Config;
+    let mut image: DynamicImage;
 
     match Config::build(args) {
         Ok(result) => { config = result; }
         Err(e) => { return Err(e); }
     }
 
-    let symbols: Symbols = Symbols::new();
-
-    let mut image = load_image(&config.image_path);
-    match image {
-        Ok(image) => {
-            Ok(())
-        }
-        Err(e) => {
-            Err(e)
-        }
+    match load_image(&config.image_path) {
+        Ok(mut image) => { image = resize_image(&mut image, &config); }
+        Err(e) => { return Err(e) }
     }
+
+    return Ok(())
 }
 
 #[derive(Debug)]
@@ -104,18 +99,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn ok_load_image() {
-        let image = load_image(&"test_images/duck.png".to_string());
-        assert!(image.is_ok());
-    }
-
-    #[test]
-    fn err_load_image() {
-        let image = load_image(&"duckduckgo".to_string());
-        assert!(image.is_err());
-    }
-
-    #[test]
     fn ok_config_build() {
         let values = vec![".".to_string(), "path/to/image".to_string(), "0.5".to_string()];
         let config = Config::build(&values[..]);
@@ -134,7 +117,19 @@ mod tests {
     }
 
     #[test]
-    fn ok_resizing_image() {
+    fn ok_load_image() {
+        let image = load_image(&"test_images/duck.png".to_string());
+        assert!(image.is_ok());
+    }
+
+    #[test]
+    fn err_load_image() {
+        let image = load_image(&"duckduckgo".to_string());
+        assert!(image.is_err());
+    }
+
+    #[test]
+    fn ok_resize_image() {
         let values = vec![".".to_string(), "path/to/image".to_string(), "0.5".to_string()];
         let config = Config::build(&values[..]);
         let image = load_image(&"test_images/duck.png".to_string());
@@ -144,12 +139,30 @@ mod tests {
     }
 
     #[test]
-    fn err_resizing_image() {
+    fn err_resize_image() {
         let values = vec![".".to_string(), "path/to/image".to_string(), "0.5".to_string()];
         let config = Config::build(&values[..]);
         let image = load_image(&"test_images/duck.png".to_string());
         let resized_image = resize_image(&mut image.unwrap(), &config.unwrap());
         assert_ne!(resized_image.width(), 400);
         assert_ne!(resized_image.height(), 400);
+    }
+
+    #[test]
+    fn ok_get_new_dimensions() {
+        let values = vec![".".to_string(), "path/to/image".to_string(), "0.5".to_string()];
+        let config = Config::build(&values[..]).unwrap();
+        let image = load_image(&"test_images/duck.png".to_string()).unwrap();
+
+        assert_eq!(get_new_dimensions(&image, &config), (200, 200));
+    }
+
+    #[test]
+    fn err_get_new_dimensions() {
+        let values = vec![".".to_string(), "path/to/image".to_string(), "0.5".to_string()];
+        let config = Config::build(&values[..]).unwrap();
+        let image = load_image(&"test_images/duck.png".to_string()).unwrap();
+
+        assert_ne!(get_new_dimensions(&image, &config), (800, 800));
     }
 }
