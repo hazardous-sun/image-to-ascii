@@ -142,7 +142,6 @@ fn load_image(image_path: &String) -> Result<DynamicImage, &'static str> {
 
 fn resize_image(image: DynamicImage, config: &Config) -> DynamicImage {
     let (nwidth, nheight) = get_new_dimensions(&image, config);
-    // return image.resize(nwidth, nheight, FilterType::Lanczos3);
     return image.resize_exact(nwidth * 2, nheight, FilterType::Lanczos3);
 }
 
