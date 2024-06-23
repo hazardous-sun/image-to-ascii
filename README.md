@@ -1,6 +1,6 @@
-# Image to ASCII
+# Image to Text
 
-This Rust project converts images into ASCII art representations.
+This Rust project converts images into UTF-8 art representations.
 
 ## Features
 
